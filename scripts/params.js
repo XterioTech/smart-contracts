@@ -5,7 +5,7 @@ const hre = require("hardhat");
 const multisigWalletAddr = () => {
     switch (hre.network.name) {
         case "rinkeby":
-            return "0xf0F8c924480e514fAe98f1834B84CC5A363EFa10";
+            return "0xe407BB6578E003FF30659a265F771576f4eDc636";
         case "mainnet":
             // TODO: Mainnet Multisig Wallet
             return "";
@@ -49,7 +49,7 @@ const vestingStages = () => {
     const daysToSecs = (days) => days.map(d => d * 24 * 60 * 60);
     switch (hre.network.name) {
         case "rinkeby":
-            return daysToSecs([1, 2, 7, 14]);
+            return daysToSecs([1, 7, 30, 90]);
         case "mainnet":
             // TODO
             return [];

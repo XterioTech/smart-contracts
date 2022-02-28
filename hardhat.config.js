@@ -37,9 +37,9 @@ extendEnvironment((hre) => {
   let presale = "";
   switch (hre.network.name) {
     case "rinkeby":
-      token = "0x91b296ff4aE2fD3dc0f56e3AB37A130974201e97";
-      presale = "0x15121FaE2D09a327351BfEDaf2A243F1b9196CfE";
-      vesting = "0x617c40A483409ccA8e30a8F6eA14FBd17e337561";
+      token = "0x73Cc24A49DF675206E61dDb3f57BAA80C4844664";
+      presale = "0x3f6580D940059Ac562c8898AFb9CfDe2Af5c4864";
+      vesting = "0xb39E36364e479F011C5Cf73eB0381CF7Ad72eC33";
       break;
     case "mainnet":
       // TODO:
