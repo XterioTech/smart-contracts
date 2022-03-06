@@ -13,7 +13,7 @@ import "@openzeppelin/contracts/access/Ownable.sol";
  * 3. The governance token corresponding to the total amount of presale will be transferred to the contract address, and the presale will start
  * 4. Users with presale quotas can then use our front-end application, which interacts with the contract, to buy governance tokens using an allowed stable coin token at a given price.
  */
-contract PresaleContract is Ownable {
+contract Presale is Ownable {
     using SafeERC20 for IERC20;
     using EnumerableSet for EnumerableSet.AddressSet;
 

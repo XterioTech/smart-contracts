@@ -2,7 +2,7 @@ const { expect } = require("chai");
 const hre = require("hardhat");
 const { deployMajorToken, deployPresale } = require("../lib/deploy")
 
-describe("Test PresaleContract", function () {
+describe("Test Presale", function () {
     let fbt, sbc, usdt, ps;                               // Contract objects
 
     const totalAmount = BigInt(1000000) * BigInt(10) ** BigInt(18);

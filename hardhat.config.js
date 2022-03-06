@@ -52,8 +52,8 @@ extendEnvironment((hre) => {
   }
   hre.contracts = {
     token: token == "" ? null : hre.ethers.getContractAt("PlayverseToken", token),
-    vesting: vesting == "" ? null : hre.ethers.getContractAt("VestingContract", vesting),
-    presale: presale == "" ? null : hre.ethers.getContractAt("PresaleContract", presale),
+    vesting: vesting == "" ? null : hre.ethers.getContractAt("Vesting", vesting),
+    presale: presale == "" ? null : hre.ethers.getContractAt("Presale", presale),
   }
 })
 
