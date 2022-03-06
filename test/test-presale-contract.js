@@ -91,24 +91,11 @@ describe("Test Presale", function () {
             expect(coins[0]).to.equal(sbc.address);
         });
 
-        it("Test White List", async function () {
-            const whitelists = await ps.whitelist(0, 3);
-            // console.log(whitelists);
-            expect(whitelists[0]).to.equal(u1.address);
-        });
-
         it("Test modify white list ", async function () {
-            // const whitelists = await ps.whitelist(0, 3);
-            // console.log(whitelists);
-            // console.log(await ps.limitAmount(u1.address));
-            // console.log(await ps.limitAmount(u2.address));
-
             await ps.setWhitelists(
                 [u1.address, u2.address, u4.address],
                 [BigInt(8) * BigInt(10) ** BigInt(18), BigInt(999) * BigInt(10) ** BigInt(18), 0]);
 
-            // console.log(await ps.limitAmount(u1.address));
-            // console.log(await ps.limitAmount(u2.address));
             expect(await ps.limitAmount(u1.address)).to.equal(BigInt(8) * BigInt(10) ** BigInt(18));
         });
 
@@ -126,7 +113,7 @@ describe("Test Presale", function () {
             await sbc.connect(u1).approve(ps.address, cost);
             // await ps.connect(u1).buyPresale(sbc.address, 5);
 
-            expect(await ps.connect(u1).buyPresale(sbc.address, num)).to.emit(ps, "PresaleBought").withArgs(u1.address, sbc.address, cost, num);
+            expect(await ps.connect(u1).buyPresale(sbc.address, num)).to.emit(ps, "BuyPresale").withArgs(u1.address, sbc.address, cost, num);
 
 
             // console.log(await fbt.balanceOf(ps.address));
@@ -150,7 +137,7 @@ describe("Test Presale", function () {
 
             await expect(ps.connect(u1).withdraw(u3.address)).to.be.revertedWith("Ownable: caller is not the owner");
 
-            expect(await ps.withdrawToken(fbt.address, u3.address, amountToWithdraw)).to.emit(ps, "TokenWithdrawed").withArgs(fbt.address, u3.address, amountToWithdraw);
+            expect(await ps.withdrawToken(fbt.address, u3.address, amountToWithdraw)).to.emit(ps, "WithdrawToken").withArgs(fbt.address, u3.address, amountToWithdraw);
 
             expect(await fbt.balanceOf(ps.address)).to.equal(totalAmount - num - amountToWithdraw);
             expect(await fbt.balanceOf(u3.address)).to.equal(amountToWithdraw);
@@ -166,7 +153,7 @@ describe("Test Presale", function () {
             await expect(ps.connect(u1).withdraw(u3.address)).to.be.revertedWith("Ownable: caller is not the owner");
 
             // await ps.withdraw(u3.address);
-            expect(await ps.withdraw(u3.address)).to.emit(ps, "AllWithdrawed").withArgs(u3.address, (await ps.totalSold()));
+            expect(await ps.withdraw(u3.address)).to.emit(ps, "WithdrawAll").withArgs(u3.address, (await ps.totalSold()));
 
             // console.log(await fbt.balanceOf(ps.address));
             // console.log(await sbc.balanceOf(ps.address));
@@ -202,7 +189,6 @@ describe("Test Presale", function () {
         });
 
         it("u3 buy once", async function () {
-            expect(await ps.whitelistCnt()).to.equal([u1.address, u2.address, u3.address, u4.address].length);
 
             await expect(ps.connect(u3).buyPresale(usdt.address, 50)).to.be.revertedWith("Exceed the purchase limit");
             //set 100 fbt limit to u3
@@ -276,8 +262,7 @@ describe("Test Presale", function () {
             // console.log('ps USDT : ', await usdt.balanceOf(ps.address));
             // console.log('u3 FBT : ', await fbt.balanceOf(u3.address));
             // console.log('ps FBT : ', await fbt.balanceOf(ps.address))
-
-            // console.log(await ps.whitelistCnt());            
+    
         });
     });
 });
