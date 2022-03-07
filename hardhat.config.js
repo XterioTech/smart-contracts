@@ -38,8 +38,8 @@ extendEnvironment((hre) => {
   switch (hre.network.name) {
     case "rinkeby":
       token = "0x73Cc24A49DF675206E61dDb3f57BAA80C4844664";
-      presale = "0x3f6580D940059Ac562c8898AFb9CfDe2Af5c4864";
-      vesting = "0xb39E36364e479F011C5Cf73eB0381CF7Ad72eC33";
+      presale = "0x0B4174812EBDD920B75237F376521057a2b23991";
+      vesting = "0xcac23BF1ebD991356930da8762a411a9F233933f";
       break;
     case "mainnet":
       // TODO:
