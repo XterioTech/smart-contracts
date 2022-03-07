@@ -14,7 +14,7 @@ import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 contract Vesting {
     using SafeERC20 for IERC20;
 
-    uint256 public constant PROPORTION_BASE = 10_000;
+    uint256 public constant PROPORTION_DENOMINATOR = 10_000;
 
     // multi-sig manager address
     address public manager;
@@ -34,7 +34,7 @@ contract Vesting {
      *
      * startSecond: vesting start time (in Unix timestamp)
      * stageSecond: Each vesting stage (in second after `startSecond`)
-     * unlockProportion: Unlocked proportion of tokens, between[0, `PROPORTION_BASE`]
+     * unlockProportion: Unlocked proportion of tokens, between[0, `PROPORTION_DENOMINATOR`]
      *
      * The lengths of `stageSecond` and `unlockProportion` are the same and unlockProportion[0] should always be 0.
      * For example, in the case of stageSecond = [0, 1000, 2000] and unlockProportion = [0, 3000, 7000],
@@ -151,12 +151,12 @@ contract Vesting {
     {
         return
             (vestingProportionSchedule(timestamp) *
-             beneficiaryAmount[beneficiary]) / PROPORTION_BASE;
+             beneficiaryAmount[beneficiary]) / PROPORTION_DENOMINATOR;
     }
 
     /**
      * Returns scheduled vesting proportion.
-     * Returns between [0, PROPORTION_BASE] since floating numbers are not supported.
+     * Returns between [0, PROPORTION_DENOMINATOR] since floating numbers are not supported.
      */
     function vestingProportionSchedule(uint256 timestamp)
         public
@@ -168,7 +168,7 @@ contract Vesting {
                 return unlockProportion[i];
             }
         }
-        return PROPORTION_BASE;
+        return PROPORTION_DENOMINATOR;
     }
 
     /**
