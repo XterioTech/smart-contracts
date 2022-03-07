@@ -11,10 +11,10 @@ import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
  * Consequently, if the vesting has already started, new tokens sent to this contract for the newly added beneficiary may partly be immediately releasable.
  * There is a multi-sig manager address, who can change beneficiary addresses in emergency cases (e.g. the beneficiary lost his private key).
  */
-contract VestingContract {
+contract Vesting {
     using SafeERC20 for IERC20;
 
-    uint256 public constant PROPORTION_BASE = 10_000;
+    uint256 public constant PROPORTION_DENOMINATOR = 10_000;
 
     // multi-sig manager address
     address public manager;
@@ -34,7 +34,7 @@ contract VestingContract {
      *
      * startSecond: vesting start time (in Unix timestamp)
      * stageSecond: Each vesting stage (in second after `startSecond`)
-     * unlockProportion: Unlocked proportion of tokens, between[0, `PROPORTION_BASE`]
+     * unlockProportion: Unlocked proportion of tokens, between[0, `PROPORTION_DENOMINATOR`]
      *
      * The lengths of `stageSecond` and `unlockProportion` are the same and unlockProportion[0] should always be 0.
      * For example, in the case of stageSecond = [0, 1000, 2000] and unlockProportion = [0, 3000, 7000],
@@ -48,14 +48,16 @@ contract VestingContract {
     uint256[] public unlockProportion;
 
     // Token released to the corresponding beneficiary
-    event TokenReleased(address indexed beneficiary, uint256 amount);
+    event ReleaseToken(address indexed beneficiary, uint256 amount);
 
     // Manager changed from currentManager to newManager.
-    event ManagementTransferred(address indexed currentManager, address indexed newManager);
+    event TransferManagement(address indexed currentManager, address indexed newManager);
 
     // Beneficiary changed from originalBeneficiary to newBeneficiary.
-    event BeneficiaryChanged(address indexed originalBeneficiary, address indexed newBeneficiary, address indexed executor);
+    event ChangeBeneficiary(address indexed originalBeneficiary, address indexed newBeneficiary, address indexed executor);
  
+    // A new beneficiary with specified vesting amount added by the executor.
+    event AddBeneficiary(address indexed beneficiary, address indexed executor, uint256 amount);
 
     constructor(
         address _manager,
@@ -79,7 +81,7 @@ contract VestingContract {
     function transferManagement(address _newManager) public {
         require(msg.sender == manager, "Unauthorized");
 
-        emit ManagementTransferred(manager, _newManager);
+        emit TransferManagement(manager, _newManager);
 
         manager = _newManager;
     }
@@ -102,6 +104,8 @@ contract VestingContract {
             address(this),
             _amount
         );
+
+        emit AddBeneficiary(_beneficiary, msg.sender, _amount);
     }
 
     /**
@@ -128,7 +132,7 @@ contract VestingContract {
         released[msg.sender] += releasable;
         totalReleased += releasable;
         
-        emit TokenReleased(msg.sender, releasable);
+        emit ReleaseToken(msg.sender, releasable);
 
         // send ERC20 token to `msg.sender`.
         IERC20(tokenAddress).safeTransfer(
@@ -147,12 +151,12 @@ contract VestingContract {
     {
         return
             (vestingProportionSchedule(timestamp) *
-             beneficiaryAmount[beneficiary]) / PROPORTION_BASE;
+             beneficiaryAmount[beneficiary]) / PROPORTION_DENOMINATOR;
     }
 
     /**
      * Returns scheduled vesting proportion.
-     * Returns between [0, PROPORTION_BASE] since floating numbers are not supported.
+     * Returns between [0, PROPORTION_DENOMINATOR] since floating numbers are not supported.
      */
     function vestingProportionSchedule(uint256 timestamp)
         public
@@ -164,7 +168,7 @@ contract VestingContract {
                 return unlockProportion[i];
             }
         }
-        return PROPORTION_BASE;
+        return PROPORTION_DENOMINATOR;
     }
 
     /**
@@ -182,7 +186,7 @@ contract VestingContract {
 
         require(msg.sender == _originalBeneficiary || msg.sender == manager, "Unauthorized request");
 
-        emit BeneficiaryChanged(_originalBeneficiary, _newBeneficiary, msg.sender);
+        emit ChangeBeneficiary(_originalBeneficiary, _newBeneficiary, msg.sender);
 
         beneficiaryAmount[_newBeneficiary] = beneficiaryAmount[_originalBeneficiary];
         beneficiaryAmount[_originalBeneficiary] = 0;

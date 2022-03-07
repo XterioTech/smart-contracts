@@ -13,48 +13,49 @@ import "@openzeppelin/contracts/access/Ownable.sol";
  * 3. The governance token corresponding to the total amount of presale will be transferred to the contract address, and the presale will start
  * 4. Users with presale quotas can then use our front-end application, which interacts with the contract, to buy governance tokens using an allowed stable coin token at a given price.
  */
-contract PresaleContract is Ownable {
+contract Presale is Ownable {
     using SafeERC20 for IERC20;
     using EnumerableSet for EnumerableSet.AddressSet;
 
     // The Governance Token for presale
-    address public tokenAddress; 
+    address public tokenAddress;
     // The total amount of tokens currently sold
-    uint256 public totalSold; 
+    uint256 public totalSold;
 
     // The given presale price, should be used together with `PRICE_DENOMINATOR`
     // 1 TOKEN = presalePrice / PRICE_DENOMINATOR USD
-    uint256 public presalePrice; 
-    uint256 public constant PRICE_DENOMINATOR = 10000; 
+    uint256 public presalePrice;
+    uint256 public constant PRICE_DENOMINATOR = 10000;
 
     // Allowed stablecoin tokens set
-    EnumerableSet.AddressSet private stableCoinSet; 
+    EnumerableSet.AddressSet private stableCoinSet;
 
-    // All whitelisted users, recorded for later audit
-    EnumerableSet.AddressSet private whitelistUserSet;  
-
-    // Presale quota, map of (addr => max # of token can buy), 
-    mapping(address => uint256) public limitAmount; 
+    // Presale quota, map of (addr => max # of token can buy),
+    mapping(address => uint256) public limitAmount;
     // Presale quota consumed, map of (addr => # of token has bought)
-    mapping(address => uint256) public boughtAmount; 
+    mapping(address => uint256) public boughtAmount;
 
     // Default token decimal
-    uint8 public constant DEFAULT_TOKEN_DECIMAL = 18; 
+    uint8 public constant DEFAULT_TOKEN_DECIMAL = 18;
     // Token decimals of those with non-default decimals
-    mapping(address => uint8) private tokenDecimals; 
+    mapping(address => uint8) private tokenDecimals;
 
-    event PresaleBought(
+    event BuyPresale(
         address indexed buyer,
         address indexed coin,
         uint256 cost,
         uint256 amount
     );
-    event TokenWithdrawed(
+    event WithdrawToken(
         address indexed token,
         address indexed toAddr,
         uint256 amount
     );
-    event AllWithdrawed(address indexed toAddr, uint256 totalSold);
+    event WithdrawAll(address indexed toAddr, uint256 totalSold);
+    event AddStableCoin(address indexed stableCoin);
+    event RemoveStableCoin(address indexed stableCoin);
+    event SetTokenDecimal(address indexed token, uint8 decimal);
+    event SetWhitelist(address indexed whitelistAddr, uint256 quotaLimit);
 
     constructor(address _tokenAddress, uint256 _presalePrice) {
         tokenAddress = _tokenAddress;
@@ -66,17 +67,20 @@ contract PresaleContract is Ownable {
         for (uint256 i = 0; i < stableCoins.length; i++) {
             address coin = stableCoins[i];
             stableCoinSet.add(coin);
+            emit AddStableCoin(coin);
         }
     }
 
     // Remove allowed stable coin
     function removeStableCoin(address stableCoin) external onlyOwner {
         stableCoinSet.remove(stableCoin);
+        emit RemoveStableCoin(stableCoin);
     }
 
     // Set token decimal
     function setTokenDecimal(address token, uint8 decimal) external onlyOwner {
         tokenDecimals[token] = decimal;
+        emit SetTokenDecimal(token, decimal);
     }
 
     // Set whitelists with limit amounts
@@ -90,14 +94,14 @@ contract PresaleContract is Ownable {
         );
         for (uint256 i = 0; i < addrs.length; i++) {
             limitAmount[addrs[i]] = amounts[i];
-            whitelistUserSet.add(addrs[i]);
+            emit SetWhitelist(addrs[i], amounts[i]);
         }
     }
 
     // Set whitelist with limit amount
     function setWhitelist(address addr, uint256 amount) external onlyOwner {
         limitAmount[addr] = amount;
-        whitelistUserSet.add(addr);
+        emit SetWhitelist(addr, amount);
     }
 
     /**
@@ -130,7 +134,7 @@ contract PresaleContract is Ownable {
         uint256 allowance = IERC20(coin).allowance(msg.sender, address(this));
         require(allowance >= cost, "Insufficient Stable Coin allowance");
 
-        emit PresaleBought(msg.sender, coin, cost, amountToBuy);
+        emit BuyPresale(msg.sender, coin, cost, amountToBuy);
 
         IERC20(coin).safeTransferFrom(msg.sender, address(this), cost);
 
@@ -144,13 +148,13 @@ contract PresaleContract is Ownable {
         address toAddr,
         uint256 amount
     ) public onlyOwner {
-        emit TokenWithdrawed(token, toAddr, amount);
+        emit WithdrawToken(token, toAddr, amount);
         IERC20(token).safeTransfer(toAddr, amount);
     }
 
     // The manager withdraw rest of tokens including our governance token and stablecoin to a new address
     function withdraw(address toAddr) public onlyOwner {
-        emit AllWithdrawed(toAddr, totalSold);
+        emit WithdrawAll(toAddr, totalSold);
 
         // send ERC20 token to `toAddr`.
         IERC20(tokenAddress).safeTransfer(
@@ -180,29 +184,6 @@ contract PresaleContract is Ownable {
     // Remaining # of token for addr can buy
     function remainingAmount(address addr) external view returns (uint256) {
         return limitAmount[addr] - boughtAmount[addr];
-    }
-
-    // Query whitelists of [from , to]  0-based
-    function whitelist(uint256 from, uint256 to)
-        external
-        view
-        returns (address[] memory)
-    {
-        require(
-            (from >= 0) && (from <= to) && (to < whitelistUserSet.length()),
-            "Query Params Illegal"
-        );
-
-        address[] memory ret = new address[](to - from + 1);
-        for (uint256 i = from; i <= to; i++) {
-            ret[i] = whitelistUserSet.at(i);
-        }
-        return ret;
-    }
-
-    // Total # of white list user
-    function whitelistCnt() external view returns (uint256) {
-        return whitelistUserSet.length();
     }
 
     // Token decimal for a given token
@@ -235,5 +216,4 @@ contract PresaleContract is Ownable {
         }
         return cost;
     }
-    
 }

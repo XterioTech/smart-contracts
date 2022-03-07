@@ -2,7 +2,7 @@ const { expect } = require("chai");
 const hre = require("hardhat");
 const { deployMajorToken, deployPresale } = require("../lib/deploy")
 
-describe("Test PresaleContract", function () {
+describe("Test Presale", function () {
     let fbt, sbc, usdt, ps;                               // Contract objects
 
     const totalAmount = BigInt(1000000) * BigInt(10) ** BigInt(18);
@@ -33,8 +33,10 @@ describe("Test PresaleContract", function () {
 
     describe("Dealing with decimals & caculate cost.", function () {
         beforeEach("init stable coins", async function () {
-            await ps.addStableCoins([sbc.address, usdt.address]);
-            await ps.setTokenDecimal(usdt.address, 6);
+            const addSBCoin = await ps.addStableCoins([sbc.address, usdt.address]);
+            expect(addSBCoin).to.emit(ps, "AddStableCoin").withArgs(sbc.address);
+            expect(addSBCoin).to.emit(ps, "AddStableCoin").withArgs(usdt.address);
+            expect(await ps.setTokenDecimal(usdt.address, 6)).to.emit(ps, "SetTokenDecimal").withArgs(usdt.address, 6);
         });
 
         it("Test init", async function () {
@@ -78,9 +80,14 @@ describe("Test PresaleContract", function () {
             await sbc.transfer(u1.address, stableCoinAmount);
 
             await ps.addStableCoins([sbc.address]);
-            await ps.setWhitelists(
+            const whitelistEvent = await ps.setWhitelists(
                 [u1.address, u2.address, u3.address, u4.address],
                 [BigInt(100) * BigInt(10) ** BigInt(18), BigInt(1000) * BigInt(10) ** BigInt(18), BigInt(10000) * BigInt(10) ** BigInt(18), 0]);
+            
+            expect(whitelistEvent).to.emit(ps, "SetWhitelist").withArgs(u1.address, BigInt(100) * BigInt(10) ** BigInt(18));
+            expect(whitelistEvent).to.emit(ps, "SetWhitelist").withArgs(u2.address, BigInt(1000) * BigInt(10) ** BigInt(18));
+            expect(whitelistEvent).to.emit(ps, "SetWhitelist").withArgs(u3.address, BigInt(10000) * BigInt(10) ** BigInt(18));
+            expect(whitelistEvent).to.emit(ps, "SetWhitelist").withArgs(u4.address, 0);
 
             expect(await fbt.balanceOf(ps.address)).to.equal(totalAmount);
         });
@@ -91,24 +98,15 @@ describe("Test PresaleContract", function () {
             expect(coins[0]).to.equal(sbc.address);
         });
 
-        it("Test White List", async function () {
-            const whitelists = await ps.whitelist(0, 3);
-            // console.log(whitelists);
-            expect(whitelists[0]).to.equal(u1.address);
-        });
-
         it("Test modify white list ", async function () {
-            // const whitelists = await ps.whitelist(0, 3);
-            // console.log(whitelists);
-            // console.log(await ps.limitAmount(u1.address));
-            // console.log(await ps.limitAmount(u2.address));
-
-            await ps.setWhitelists(
+            const whitelistEvent = await ps.setWhitelists(
                 [u1.address, u2.address, u4.address],
                 [BigInt(8) * BigInt(10) ** BigInt(18), BigInt(999) * BigInt(10) ** BigInt(18), 0]);
+            
+            expect(whitelistEvent).to.emit(ps, "SetWhitelist").withArgs(u1.address, BigInt(8) * BigInt(10) ** BigInt(18));
+            expect(whitelistEvent).to.emit(ps, "SetWhitelist").withArgs(u2.address, BigInt(999) * BigInt(10) ** BigInt(18));
+            expect(whitelistEvent).to.emit(ps, "SetWhitelist").withArgs(u4.address, 0);        
 
-            // console.log(await ps.limitAmount(u1.address));
-            // console.log(await ps.limitAmount(u2.address));
             expect(await ps.limitAmount(u1.address)).to.equal(BigInt(8) * BigInt(10) ** BigInt(18));
         });
 
@@ -126,7 +124,7 @@ describe("Test PresaleContract", function () {
             await sbc.connect(u1).approve(ps.address, cost);
             // await ps.connect(u1).buyPresale(sbc.address, 5);
 
-            expect(await ps.connect(u1).buyPresale(sbc.address, num)).to.emit(ps, "PresaleBought").withArgs(u1.address, sbc.address, cost, num);
+            expect(await ps.connect(u1).buyPresale(sbc.address, num)).to.emit(ps, "BuyPresale").withArgs(u1.address, sbc.address, cost, num);
 
 
             // console.log(await fbt.balanceOf(ps.address));
@@ -150,7 +148,7 @@ describe("Test PresaleContract", function () {
 
             await expect(ps.connect(u1).withdraw(u3.address)).to.be.revertedWith("Ownable: caller is not the owner");
 
-            expect(await ps.withdrawToken(fbt.address, u3.address, amountToWithdraw)).to.emit(ps, "TokenWithdrawed").withArgs(fbt.address, u3.address, amountToWithdraw);
+            expect(await ps.withdrawToken(fbt.address, u3.address, amountToWithdraw)).to.emit(ps, "WithdrawToken").withArgs(fbt.address, u3.address, amountToWithdraw);
 
             expect(await fbt.balanceOf(ps.address)).to.equal(totalAmount - num - amountToWithdraw);
             expect(await fbt.balanceOf(u3.address)).to.equal(amountToWithdraw);
@@ -166,7 +164,7 @@ describe("Test PresaleContract", function () {
             await expect(ps.connect(u1).withdraw(u3.address)).to.be.revertedWith("Ownable: caller is not the owner");
 
             // await ps.withdraw(u3.address);
-            expect(await ps.withdraw(u3.address)).to.emit(ps, "AllWithdrawed").withArgs(u3.address, (await ps.totalSold()));
+            expect(await ps.withdraw(u3.address)).to.emit(ps, "WithdrawAll").withArgs(u3.address, (await ps.totalSold()));
 
             // console.log(await fbt.balanceOf(ps.address));
             // console.log(await sbc.balanceOf(ps.address));
@@ -179,7 +177,7 @@ describe("Test PresaleContract", function () {
         });
 
         it("Test remove stable coin", async function () {
-            await ps.removeStableCoin(sbc.address);
+            expect(await ps.removeStableCoin(sbc.address)).to.emit(ps, "RemoveStableCoin").withArgs(sbc.address);
             await expect(ps.connect(u1).buyPresale(sbc.address, BigInt(100) * BigInt(10) ** BigInt(18))).to.be.revertedWith("Payment with this type of stablecoin is not supported");
         });
 
@@ -188,7 +186,7 @@ describe("Test PresaleContract", function () {
     describe("One User Buy Muti Times With USDT.", function () {
         beforeEach("init stable coins", async function () {
             await ps.addStableCoins([sbc.address, usdt.address]);
-            await ps.setTokenDecimal(usdt.address, 6);
+            expect(await ps.setTokenDecimal(usdt.address, 6)).to.emit(ps, "SetTokenDecimal").withArgs(usdt.address, 6);
 
             await fbt.transfer(ps.address, totalAmount)
             await sbc.transfer(u1.address, stableCoinAmount);
@@ -202,12 +200,12 @@ describe("Test PresaleContract", function () {
         });
 
         it("u3 buy once", async function () {
-            expect(await ps.whitelistCnt()).to.equal([u1.address, u2.address, u3.address, u4.address].length);
 
             await expect(ps.connect(u3).buyPresale(usdt.address, 50)).to.be.revertedWith("Exceed the purchase limit");
             //set 100 fbt limit to u3
             const first_limit = BigInt(100) * BigInt(10) ** BigInt(18);
-            await ps.setWhitelist(u3.address, first_limit);
+            expect(await ps.setWhitelist(u3.address, first_limit)).to.emit(ps, "SetWhitelist").withArgs(u3.address, first_limit);
+
             // console.log('u3 limit amount is: ', await ps.limitAmount(u3.address));
             // console.log('u3 bought amount is: ', await ps.boughtAmount(u3.address));
             // console.log('u3 remain amount is: ', await ps.remainingAmount(u3.address));
@@ -276,8 +274,7 @@ describe("Test PresaleContract", function () {
             // console.log('ps USDT : ', await usdt.balanceOf(ps.address));
             // console.log('u3 FBT : ', await fbt.balanceOf(u3.address));
             // console.log('ps FBT : ', await fbt.balanceOf(ps.address))
-
-            // console.log(await ps.whitelistCnt());            
+    
         });
     });
 });
