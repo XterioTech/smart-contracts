@@ -33,8 +33,10 @@ describe("Test Presale", function () {
 
     describe("Dealing with decimals & caculate cost.", function () {
         beforeEach("init stable coins", async function () {
-            await ps.addStableCoins([sbc.address, usdt.address]);
-            await ps.setTokenDecimal(usdt.address, 6);
+            const addSBCoin = await ps.addStableCoins([sbc.address, usdt.address]);
+            expect(addSBCoin).to.emit(ps, "AddStableCoin").withArgs(sbc.address);
+            expect(addSBCoin).to.emit(ps, "AddStableCoin").withArgs(usdt.address);
+            expect(await ps.setTokenDecimal(usdt.address, 6)).to.emit(ps, "SetTokenDecimal").withArgs(usdt.address, 6);
         });
 
         it("Test init", async function () {
@@ -78,9 +80,14 @@ describe("Test Presale", function () {
             await sbc.transfer(u1.address, stableCoinAmount);
 
             await ps.addStableCoins([sbc.address]);
-            await ps.setWhitelists(
+            const whitelistEvent = await ps.setWhitelists(
                 [u1.address, u2.address, u3.address, u4.address],
                 [BigInt(100) * BigInt(10) ** BigInt(18), BigInt(1000) * BigInt(10) ** BigInt(18), BigInt(10000) * BigInt(10) ** BigInt(18), 0]);
+            
+            expect(whitelistEvent).to.emit(ps, "SetWhitelist").withArgs(u1.address, BigInt(100) * BigInt(10) ** BigInt(18));
+            expect(whitelistEvent).to.emit(ps, "SetWhitelist").withArgs(u2.address, BigInt(1000) * BigInt(10) ** BigInt(18));
+            expect(whitelistEvent).to.emit(ps, "SetWhitelist").withArgs(u3.address, BigInt(10000) * BigInt(10) ** BigInt(18));
+            expect(whitelistEvent).to.emit(ps, "SetWhitelist").withArgs(u4.address, 0);
 
             expect(await fbt.balanceOf(ps.address)).to.equal(totalAmount);
         });
@@ -92,9 +99,13 @@ describe("Test Presale", function () {
         });
 
         it("Test modify white list ", async function () {
-            await ps.setWhitelists(
+            const whitelistEvent = await ps.setWhitelists(
                 [u1.address, u2.address, u4.address],
                 [BigInt(8) * BigInt(10) ** BigInt(18), BigInt(999) * BigInt(10) ** BigInt(18), 0]);
+            
+            expect(whitelistEvent).to.emit(ps, "SetWhitelist").withArgs(u1.address, BigInt(8) * BigInt(10) ** BigInt(18));
+            expect(whitelistEvent).to.emit(ps, "SetWhitelist").withArgs(u2.address, BigInt(999) * BigInt(10) ** BigInt(18));
+            expect(whitelistEvent).to.emit(ps, "SetWhitelist").withArgs(u4.address, 0);        
 
             expect(await ps.limitAmount(u1.address)).to.equal(BigInt(8) * BigInt(10) ** BigInt(18));
         });
@@ -166,7 +177,7 @@ describe("Test Presale", function () {
         });
 
         it("Test remove stable coin", async function () {
-            await ps.removeStableCoin(sbc.address);
+            expect(await ps.removeStableCoin(sbc.address)).to.emit(ps, "RemoveStableCoin").withArgs(sbc.address);
             await expect(ps.connect(u1).buyPresale(sbc.address, BigInt(100) * BigInt(10) ** BigInt(18))).to.be.revertedWith("Payment with this type of stablecoin is not supported");
         });
 
@@ -175,7 +186,7 @@ describe("Test Presale", function () {
     describe("One User Buy Muti Times With USDT.", function () {
         beforeEach("init stable coins", async function () {
             await ps.addStableCoins([sbc.address, usdt.address]);
-            await ps.setTokenDecimal(usdt.address, 6);
+            expect(await ps.setTokenDecimal(usdt.address, 6)).to.emit(ps, "SetTokenDecimal").withArgs(usdt.address, 6);
 
             await fbt.transfer(ps.address, totalAmount)
             await sbc.transfer(u1.address, stableCoinAmount);
@@ -193,7 +204,8 @@ describe("Test Presale", function () {
             await expect(ps.connect(u3).buyPresale(usdt.address, 50)).to.be.revertedWith("Exceed the purchase limit");
             //set 100 fbt limit to u3
             const first_limit = BigInt(100) * BigInt(10) ** BigInt(18);
-            await ps.setWhitelist(u3.address, first_limit);
+            expect(await ps.setWhitelist(u3.address, first_limit)).to.emit(ps, "SetWhitelist").withArgs(u3.address, first_limit);
+
             // console.log('u3 limit amount is: ', await ps.limitAmount(u3.address));
             // console.log('u3 bought amount is: ', await ps.boughtAmount(u3.address));
             // console.log('u3 remain amount is: ', await ps.remainingAmount(u3.address));
