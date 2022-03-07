@@ -32,7 +32,7 @@ const main = async () => {
     console.info("Vesting start: ", convertTimestamp(start));
     console.info("Vesting Stages: ");
     for (let i = 0; i < stages.length; i++) {
-        console.info("\t", convertTimestamp(start + stages[i]), proportionToPercent(stageProportions[i]));
+        console.info("\t", convertTimestamp(start + stages[i]), i < stages.length-1 ? proportionToPercent(stageProportions[i+1]) : "100%");
     }
     const { confirm } = await prompt.get([{ name: "confirm", description: "Confirm? (y/N)" }]);
     if (confirm === 'y' || confirm === 'Y') {
