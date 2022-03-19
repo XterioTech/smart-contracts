@@ -57,7 +57,12 @@ contract Presale is Ownable {
     event SetTokenDecimal(address indexed token, uint8 decimal);
     event SetWhitelist(address indexed whitelistAddr, uint256 quotaLimit);
 
-    constructor(address _tokenAddress, uint256 _presalePrice) {
+    constructor(
+        address _tokenAddress, 
+        uint256 _presalePrice
+    ) {
+        require(address(_tokenAddress) != address(0), "Presale: zero address is not allowed");  
+        require(_presalePrice > 0, "Presale: presale price must not be 0");  
         tokenAddress = _tokenAddress;
         presalePrice = _presalePrice;
     }
@@ -66,15 +71,19 @@ contract Presale is Ownable {
     function addStableCoins(address[] calldata stableCoins) external onlyOwner {
         for (uint256 i = 0; i < stableCoins.length; i++) {
             address coin = stableCoins[i];
-            stableCoinSet.add(coin);
-            emit AddStableCoin(coin);
+            bool success = stableCoinSet.add(coin);
+            if (success) {
+                emit AddStableCoin(coin); 
+            }
         }
     }
 
     // Remove allowed stable coin
     function removeStableCoin(address stableCoin) external onlyOwner {
-        stableCoinSet.remove(stableCoin);
-        emit RemoveStableCoin(stableCoin);
+        bool success = stableCoinSet.remove(stableCoin);
+        if (success) {
+            emit RemoveStableCoin(stableCoin);
+        }
     }
 
     // Set token decimal
@@ -109,7 +118,7 @@ contract Presale is Ownable {
      * coin: stable coin address used to buy
      * amountToBuy: buying amount of the target token
      */
-    function buyPresale(address coin, uint256 amountToBuy) public {
+    function buyPresale(address coin, uint256 amountToBuy) external {
         require(
             boughtAmount[msg.sender] + amountToBuy <= limitAmount[msg.sender],
             "Exceed the purchase limit"
@@ -147,13 +156,13 @@ contract Presale is Ownable {
         address token,
         address toAddr,
         uint256 amount
-    ) public onlyOwner {
+    ) external onlyOwner {
         emit WithdrawToken(token, toAddr, amount);
         IERC20(token).safeTransfer(toAddr, amount);
     }
 
     // The manager withdraw rest of tokens including our governance token and stablecoin to a new address
-    function withdraw(address toAddr) public onlyOwner {
+    function withdraw(address toAddr) external onlyOwner {
         emit WithdrawAll(toAddr, totalSold);
 
         // send ERC20 token to `toAddr`.
