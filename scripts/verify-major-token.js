@@ -7,7 +7,7 @@ const main = async () => {
         constructorArguments: [
             multisigWalletAddr()
         ],
-        contract: "contracts/PlayverseToken.sol:PlayverseToken"
+        contract: "contracts/XterToken.sol:XterToken"
     });
 }
 
