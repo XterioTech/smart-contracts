@@ -54,7 +54,7 @@ describe("Test Vesting", function () {
     // Should approve before adding
     await expect(
       vc.addBeneficiary(u2.address, beneficiaryAmounts[2])
-    ).to.be.revertedWith("ERC20: transfer amount exceeds allowance");
+    ).to.be.revertedWith("ERC20: insufficient allowance");
 
     // Approve
     await fbt.approve(vc.address, beneficiaryAmounts[2]);
