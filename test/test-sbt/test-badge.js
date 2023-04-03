@@ -42,10 +42,8 @@ describe("Test Badge Contract", function () {
 
     //uri reset correct
     await badge.connect(admin).setBaseURI(newbaseURI);
-    // (uint16 tokenType, uint240 tokenId) , tokenType = 1, tokenId = 1 ===> return (uint256(tokenType) << 240) | uint256(tokenId);
-    const tokenIdForRedFirst = BigNumber.from(
-      "1766847064778384329583297500742918515827483896875618958121606201292619777"
-    );
+    // (uint16 tokenType, uint64 tokenId) , tokenType = 1, tokenId = 1 ===> return (uint256(tokenType) << 64) | uint256(tokenId);
+    const tokenIdForRedFirst = BigNumber.from("18446744073709551617");
     expect(await badge.tokenURI(tokenIdForRedFirst)).to.equal(
       newbaseURI + tokenIdForRedFirst
     );

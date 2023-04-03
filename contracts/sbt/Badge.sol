@@ -15,10 +15,10 @@ contract Badge is SBTEnumerable, AccessControl {
     // Badge SBT ids are composed of two parts:
     // 1. tokenType: the type of the badge
     // 2. tokenId: the id of the badge
-    // The tokenType is a uint16, and the tokenId is a uint240
+    // The tokenType is a uint16, and the tokenId is a uint64
     struct BadgeInfo {
         uint16 tokenType;
-        uint240 tokenId;
+        uint64 tokenId;
     }
 
     bytes32 public constant OPERATOR_ROLE = keccak256("OPERATOR_ROLE");
@@ -29,10 +29,10 @@ contract Badge is SBTEnumerable, AccessControl {
     mapping(uint16 => Counters.Counter) _tokenIds;
 
     // badge-type => badge-id => owner
-    mapping(uint16 => mapping(uint240 => address)) badge2address;
+    mapping(uint16 => mapping(uint64 => address)) badge2address;
 
     // owner => badge-type => badge-id
-    mapping(address => mapping(uint16 => uint240)) address2badge;
+    mapping(address => mapping(uint16 => uint64)) address2badge;
 
     // badge-type => badge-id => issued-time
     mapping(address => mapping(uint16 => uint256)) issuedTimestamp;
@@ -74,7 +74,7 @@ contract Badge is SBTEnumerable, AccessControl {
     function getBadgeOf(address x, uint16 tokenType)
         public
         view
-        returns (uint240)
+        returns (uint64)
     {
         return address2badge[x][tokenType];
     }
@@ -84,7 +84,7 @@ contract Badge is SBTEnumerable, AccessControl {
      * @param tokenType The type of the Badge SBT
      * @param tokenId The ID of the Badge SBT
      */
-    function getOwnerOf(uint16 tokenType, uint240 tokenId)
+    function getOwnerOf(uint16 tokenType, uint64 tokenId)
         public
         view
         returns (address)
@@ -132,7 +132,7 @@ contract Badge is SBTEnumerable, AccessControl {
     function revokeBadge(
         address owner,
         uint16 tokenType,
-        uint240 tokenId
+        uint64 tokenId
     ) external onlyRole(OPERATOR_ROLE) {
         require(
             badge2address[tokenType][tokenId] == owner &&
@@ -140,7 +140,7 @@ contract Badge is SBTEnumerable, AccessControl {
             "Badge: cannot revoke badge"
         );
         badge2address[tokenType][tokenId] = address(0);
-        address2badge[owner][tokenType] = uint240(0);
+        address2badge[owner][tokenType] = uint64(0);
 
         _burn(_composeTokenId(tokenType, tokenId));
     }
@@ -175,11 +175,11 @@ contract Badge is SBTEnumerable, AccessControl {
     }
 
     function _issueBadge(address recipient, uint16 tokenType) internal {
-        uint240 newTokenId = _newTokenId(tokenType);
+        uint64 newTokenId = _newTokenId(tokenType);
 
         require(
             badge2address[tokenType][newTokenId] == address(0) &&
-                address2badge[recipient][tokenType] == uint240(0),
+                address2badge[recipient][tokenType] == uint64(0),
             "Badge: cannot issue badge"
         );
         badge2address[tokenType][newTokenId] = recipient;
@@ -191,12 +191,12 @@ contract Badge is SBTEnumerable, AccessControl {
     }
 
     // Utility functions for token ID
-    function _composeTokenId(uint16 tokenType, uint240 tokenId)
+    function _composeTokenId(uint16 tokenType, uint64 tokenId)
         internal
         pure
         returns (uint256)
     {
-        return (uint256(tokenType) << 240) | uint256(tokenId);
+        return (uint256(tokenType) << 64) | uint256(tokenId);
     }
 
     function _decomposeTokenId(uint256 tokenId)
@@ -204,8 +204,8 @@ contract Badge is SBTEnumerable, AccessControl {
         pure
         returns (BadgeInfo memory info)
     {
-        info.tokenType = uint16(tokenId >> 240);
-        info.tokenId = uint240(tokenId);
+        info.tokenType = uint16(tokenId >> 64);
+        info.tokenId = uint64(tokenId);
     }
 
     // Helper functions for signature verification
@@ -247,11 +247,11 @@ contract Badge is SBTEnumerable, AccessControl {
      */
     function _newTokenId(uint16 tokenType)
         internal
-        returns (uint240 newTokenId)
+        returns (uint64 newTokenId)
     {
         Counters.Counter storage tokenId = _tokenIds[tokenType];
         tokenId.increment();
-        newTokenId = uint240(tokenId.current());
+        newTokenId = uint64(tokenId.current());
     }
 
     function supportsInterface(bytes4 interfaceId)
