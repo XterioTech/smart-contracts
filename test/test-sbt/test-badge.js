@@ -20,12 +20,19 @@ describe("Test Badge Contract", function () {
 
   let redTokenIdStart, greenTokenIdStart, blueTokenIdStart;
 
+  let currentTimestamp;
+
   beforeEach("Deploy contrats", async function () {
     [owner, admin, admin2, u1, u2] = await hre.ethers.getSigners();
     badge = await deployBadge(name, symbol, baseURI, admin.address);
     redTokenIdStart = 1;
     greenTokenIdStart = 1;
     blueTokenIdStart = 1;
+
+    // getting timestamp
+    const blockNumBefore = await ethers.provider.getBlockNumber();
+    const blockBefore = await ethers.provider.getBlock(blockNumBefore);
+    currentTimestamp = blockBefore.timestamp;
   });
 
   it("should issue badge for user", async function () {
@@ -99,29 +106,67 @@ describe("Test Badge Contract", function () {
     const tokenId = redTokenIdStart;
 
     const msgHash = ethers.utils.solidityKeccak256(
-      ["address", "uint16", "uint256", "address"],
-      [recipient, tokenType, hre.network.config.chainId, badge.address]
+      ["uint256", "address", "uint16", "uint256", "address"],
+      [
+        currentTimestamp + 120,
+        recipient,
+        tokenType,
+        hre.network.config.chainId,
+        badge.address,
+      ]
     );
     const signature = await admin.signMessage(ethers.utils.arrayify(msgHash));
 
-    await badge.connect(u1).claimBadge(recipient, tokenType, signature);
+    await badge
+      .connect(u1)
+      .claimBadge(recipient, tokenType, signature, currentTimestamp + 120);
 
     expect(await badge.getBadgeOf(recipient, tokenType)).to.equal(tokenId);
+  });
+
+  it("should fail when signature expired", async function () {
+    const recipient = u1.address;
+    const tokenType = RED;
+
+    const msgHash = ethers.utils.solidityKeccak256(
+      ["uint256", "address", "uint16", "uint256", "address"],
+      [
+        currentTimestamp - 120,
+        recipient,
+        tokenType,
+        hre.network.config.chainId,
+        badge.address,
+      ]
+    );
+    const signature = await admin.signMessage(ethers.utils.arrayify(msgHash));
+
+    await expect(
+      badge
+        .connect(u1)
+        .claimBadge(recipient, tokenType, signature, currentTimestamp - 120)
+    ).to.be.revertedWith("Badge: signature expired");
   });
 
   it("should fail when signer is not admin", async function () {
     const recipient = u1.address;
     const tokenType = RED;
-    const tokenId = redTokenIdStart;
 
     const msgHash = ethers.utils.solidityKeccak256(
-      ["address", "uint16", "uint256", "address"],
-      [recipient, tokenType, hre.network.config.chainId, badge.address]
+      ["uint256", "address", "uint16", "uint256", "address"],
+      [
+        currentTimestamp + 120,
+        recipient,
+        tokenType,
+        hre.network.config.chainId,
+        badge.address,
+      ]
     );
     const signature = await u1.signMessage(ethers.utils.arrayify(msgHash));
 
     await expect(
-      badge.connect(u1).claimBadge(recipient, tokenType, signature)
+      badge
+        .connect(u1)
+        .claimBadge(recipient, tokenType, signature, currentTimestamp + 120)
     ).to.be.revertedWith("Badge: signer does not have operator role");
   });
 
