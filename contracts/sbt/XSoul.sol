@@ -81,13 +81,17 @@ contract XSoul is SBTUnique, AccessControl {
      * @param recipient The address to issue the XSoul to
      * @param signature The signature of the signer
      */
-    function claimXSoul(address recipient, bytes calldata signature) external {
-        bytes32 inputHash = _getInputHash(recipient);
+    function claimXSoul(address recipient, bytes calldata signature, uint256 expire) external {
+        // 1. Check not expired
+        require(expire > block.timestamp, "XSoul: signature expired");
+        // 2. Check the validity of the signature
+        bytes32 inputHash = _getInputHash(recipient, expire);
         address signer = _recoverSigner(inputHash, signature);
         require(
             hasRole(OPERATOR_ROLE, signer),
             "XSoul: signer does not have operator role"
         );
+        // 3. issue Xsoul
         _issueXSoul(recipient);
     }
 
@@ -123,10 +127,10 @@ contract XSoul is SBTUnique, AccessControl {
     }
 
     /********** Helper functions for signature verification **********/
-    function _getInputHash(address recipient) internal view returns (bytes32) {
+    function _getInputHash(address recipient, uint256 expire) internal view returns (bytes32) {
         return
             keccak256(
-                abi.encodePacked(recipient, block.chainid, address(this))
+                abi.encodePacked(expire, recipient, block.chainid, address(this))
             );
     }
 

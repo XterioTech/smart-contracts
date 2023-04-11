@@ -29,7 +29,7 @@ contract BasicERC721 is
     using Strings for uint256;
     using Counters for Counters.Counter;
 
-    uint256 constant VERSION = 20230120;
+    uint256 constant VERSION = 20230409;
 
     Counters.Counter private _tokenIdCounter;
 

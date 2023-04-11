@@ -33,6 +33,7 @@ contract ERC4907 is ERC721, IERC4907 {
             _isApprovedOrOwner(msg.sender, tokenId),
             "ERC4907: transfer caller is not owner nor approved"
         );
+        require(expires > block.timestamp, "ERC4907: expires should be greater than the current timestamp");
         UserInfo storage info = _users[tokenId];
         info.user = user;
         info.expires = expires;

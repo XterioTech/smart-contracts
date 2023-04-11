@@ -23,6 +23,8 @@ describe("Test XSoul Contract", function () {
 
   let tokenId;
 
+  let currentTimestamp;
+
   beforeEach("Deploy contrats", async function () {
     [owner, admin, admin2, u1, u2, unqualifiedUser] =
       await hre.ethers.getSigners();
@@ -46,6 +48,11 @@ describe("Test XSoul Contract", function () {
     await badge.connect(admin).issueBadge(u2.address, BLUE);
 
     await badge.connect(admin).issueBadge(unqualifiedUser.address, RED);
+
+    // getting timestamp
+    const blockNumBefore = await ethers.provider.getBlockNumber();
+    const blockBefore = await ethers.provider.getBlock(blockNumBefore);
+    currentTimestamp = blockBefore.timestamp;
   });
 
   it("should not issue xsoul for unqualifiedUser user", async function () {
@@ -91,35 +98,73 @@ describe("Test XSoul Contract", function () {
     // delegated mint to u1
     const recipient = u1.address;
     const msgHash = ethers.utils.solidityKeccak256(
-      ["address", "uint256", "address"],
-      [recipient, hre.network.config.chainId, xsoul.address]
+      ["uint256", "address", "uint256", "address"],
+      [
+        currentTimestamp + 120,
+        recipient,
+        hre.network.config.chainId,
+        xsoul.address,
+      ]
     );
     const signature = await admin.signMessage(ethers.utils.arrayify(msgHash));
-    await xsoul.connect(u1).claimXSoul(recipient, signature);
+    await xsoul
+      .connect(u1)
+      .claimXSoul(recipient, signature, currentTimestamp + 120);
     expect(await xsoul.tokenOf(recipient)).to.equal(tokenId);
 
     // delegated mint to u2
     const recipient2 = u2.address;
     const msgHash2 = ethers.utils.solidityKeccak256(
-      ["address", "uint256", "address"],
-      [recipient2, hre.network.config.chainId, xsoul.address]
+      ["uint256", "address", "uint256", "address"],
+      [
+        currentTimestamp + 120,
+        recipient2,
+        hre.network.config.chainId,
+        xsoul.address,
+      ]
     );
     const signature2 = await admin.signMessage(ethers.utils.arrayify(msgHash2));
-    await xsoul.connect(u2).claimXSoul(recipient2, signature2);
+    await xsoul
+      .connect(u2)
+      .claimXSoul(recipient2, signature2, currentTimestamp + 120);
     expect(await xsoul.tokenOf(recipient2)).to.equal(++tokenId);
+  });
+
+  it("should fail when signature expire", async function () {
+    const recipient = u1.address;
+
+    const msgHash = ethers.utils.solidityKeccak256(
+      ["uint256", "address", "uint256", "address"],
+      [
+        currentTimestamp - 120,
+        recipient,
+        hre.network.config.chainId,
+        xsoul.address,
+      ]
+    );
+    const signature = await u1.signMessage(ethers.utils.arrayify(msgHash));
+
+    await expect(
+      xsoul.connect(u1).claimXSoul(recipient, signature, currentTimestamp - 120)
+    ).to.be.revertedWith("XSoul: signature expired");
   });
 
   it("should fail when signer is not admin", async function () {
     const recipient = u1.address;
 
     const msgHash = ethers.utils.solidityKeccak256(
-      ["address", "uint256", "address"],
-      [recipient, hre.network.config.chainId, xsoul.address]
+      ["uint256", "address", "uint256", "address"],
+      [
+        currentTimestamp + 120,
+        recipient,
+        hre.network.config.chainId,
+        xsoul.address,
+      ]
     );
     const signature = await u1.signMessage(ethers.utils.arrayify(msgHash));
 
     await expect(
-      xsoul.connect(u1).claimXSoul(recipient, signature)
+      xsoul.connect(u1).claimXSoul(recipient, signature, currentTimestamp + 120)
     ).to.be.revertedWith("XSoul: signer does not have operator role");
   });
 

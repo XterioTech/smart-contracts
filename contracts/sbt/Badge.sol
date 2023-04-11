@@ -155,17 +155,21 @@ contract Badge is SBTEnumerable, AccessControl {
     function claimBadge(
         address recipient,
         uint16 tokenType,
-        bytes calldata signature
+        bytes calldata signature,
+        uint256 expire
     ) external {
-        // 1. Check the validity of the signature
-        bytes32 inputHash = _getInputHash(recipient, tokenType);
+        // 1. Check not expired
+        require(expire > block.timestamp, "Badge: signature expired");
+        
+        // 2. Check the validity of the signature
+        bytes32 inputHash = _getInputHash(recipient, tokenType, expire);
         address signer = _recoverSigner(inputHash, signature);
         require(
             hasRole(OPERATOR_ROLE, signer),
             "Badge: signer does not have operator role"
         );
 
-        // 2. mint the badge
+        // 3. mint the badge
         _issueBadge(recipient, tokenType);
     }
 
@@ -209,7 +213,7 @@ contract Badge is SBTEnumerable, AccessControl {
     }
 
     // Helper functions for signature verification
-    function _getInputHash(address recipient, uint16 tokenType)
+    function _getInputHash(address recipient, uint16 tokenType, uint256 expire)
         internal
         view
         returns (bytes32)
@@ -217,6 +221,7 @@ contract Badge is SBTEnumerable, AccessControl {
         return
             keccak256(
                 abi.encodePacked(
+                    expire,
                     recipient,
                     tokenType,
                     block.chainid,
